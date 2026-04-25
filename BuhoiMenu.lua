@@ -84,6 +84,12 @@ local function file_exists(path)
     return false
 end
 
+local function chat_add_utf8(msg, color)
+    local text = tostring(msg or '')
+    local ok, decoded = pcall(function() return u8:decode(text) end)
+    sampAddChatMessage(ok and decoded or text, color or 0x66CCFF)
+end
+
 local function version_trim(s)
     return tostring(s or ''):match('^%s*(.-)%s*$') or ''
 end
@@ -192,20 +198,20 @@ local function check_updates_chat_only()
         local manifest, err = fetch_update_manifest()
         if not manifest then
             updater.status = 'Ошибка: ' .. tostring(err)
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
         end
         apply_manifest_to_updater(manifest)
         if updater.has_update then
             updater.status = ('Доступно обновление: %s -> %s'):format(get_local_script_version(), updater.remote_version)
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             if updater.update_info ~= '' then
-                sampAddChatMessage('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
+                chat_add_utf8('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
             end
         else
             updater.status = ('У вас актуальная версия: %s'):format(get_local_script_version())
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
         end
         updater.busy = false
     end)
@@ -222,20 +228,20 @@ local function run_script_update()
         local manifest, err = fetch_update_manifest()
         if not manifest then
             updater.status = 'Ошибка: ' .. tostring(err)
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
         end
         apply_manifest_to_updater(manifest)
         if not updater.has_update then
             updater.status = ('Обновлений нет. Текущая версия: %s'):format(get_local_script_version())
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
         end
         if updater.update_url == '' then
             updater.status = 'В BuhoiUpdate.json отсутствует update_url'
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
         end
@@ -243,7 +249,7 @@ local function run_script_update()
         updater.status = 'Скачиваем новую версию скрипта...'
         if not download_url_to_file_sync(UPDATE_TMP_SCRIPT, updater.update_url, 120) then
             updater.status = 'Ошибка скачивания новой версии .lua'
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
         end
@@ -259,7 +265,7 @@ local function run_script_update()
         local fout = io.open(path, 'wb') or io.open(path:gsub('/', '\\'), 'wb')
         if not fout then
             updater.status = 'Не удалось записать BuhoiMenu.lua'
-            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
         end
@@ -268,9 +274,9 @@ local function run_script_update()
         fout:close()
         pcall(os.remove, UPDATE_TMP_SCRIPT)
         updater.status = ('Обновлено до версии %s. Перезагружаем...'):format(updater.remote_version)
-        sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+        chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
         if updater.update_info ~= '' then
-            sampAddChatMessage('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
+            chat_add_utf8('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
         end
         updater.busy = false
         wait(900)
