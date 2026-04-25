@@ -76,6 +76,8 @@ local cfg = {
     }
 }
 
+local updater
+
 local function file_exists(path)
     local f = io.open(path, 'r')
     if f then f:close() return true end
@@ -133,26 +135,43 @@ local function download_url_to_file_sync(dest, url, timeout_sec)
 end
 
 local function fetch_update_manifest()
-    if file_exists(UPDATE_TMP_MANIFEST) then pcall(os.remove, UPDATE_TMP_MANIFEST) end
-    local url = UPDATE_MANIFEST_URL .. '?t=' .. tostring(os.time())
-    if not download_url_to_file_sync(UPDATE_TMP_MANIFEST, url, 45) then
-        return nil, 'Не удалось скачать BuhoiUpdate.json'
+    local function with_cache_bust(base)
+        local sep = base:find('?', 1, true) and '&' or '?'
+        return base .. sep .. 't=' .. tostring(os.time())
     end
-    local f = io.open(UPDATE_TMP_MANIFEST, 'r')
-    if not f then
-        return nil, 'Не удалось открыть BuhoiUpdate.json'
+    local urls = { with_cache_bust(UPDATE_MANIFEST_URL) }
+    if UPDATE_MANIFEST_URL:find('/main/', 1, true) then
+        urls[#urls + 1] = with_cache_bust(UPDATE_MANIFEST_URL:gsub('/main/', '/master/', 1))
+    elseif UPDATE_MANIFEST_URL:find('/master/', 1, true) then
+        urls[#urls + 1] = with_cache_bust(UPDATE_MANIFEST_URL:gsub('/master/', '/main/', 1))
     end
-    local raw = f:read('*a') or ''
-    f:close()
-    pcall(os.remove, UPDATE_TMP_MANIFEST)
-    local ok, data = pcall(decodeJson, raw)
-    if not ok or type(data) ~= 'table' then
-        return nil, 'Ошибка разбора BuhoiUpdate.json'
+    local last_err = ''
+    for _, url in ipairs(urls) do
+        if file_exists(UPDATE_TMP_MANIFEST) then pcall(os.remove, UPDATE_TMP_MANIFEST) end
+        if download_url_to_file_sync(UPDATE_TMP_MANIFEST, url, 45) then
+            local f = io.open(UPDATE_TMP_MANIFEST, 'r')
+            if f then
+                local raw = f:read('*a') or ''
+                f:close()
+                pcall(os.remove, UPDATE_TMP_MANIFEST)
+                local ok, data = pcall(decodeJson, raw)
+                if ok and type(data) == 'table' then
+                    if data.current_version and tostring(data.current_version) ~= '' then
+                        return data, nil
+                    end
+                    last_err = 'В BuhoiUpdate.json отсутствует current_version'
+                else
+                    last_err = 'Ошибка разбора BuhoiUpdate.json'
+                end
+            else
+                last_err = 'Не удалось открыть скачанный BuhoiUpdate.json'
+            end
+        end
     end
-    if not data.current_version or tostring(data.current_version) == '' then
-        return nil, 'В BuhoiUpdate.json нет current_version'
+    if last_err == '' then
+        last_err = 'Файл не скачан. Проверьте UPDATE_MANIFEST_URL: ' .. UPDATE_MANIFEST_URL
     end
-    return data, nil
+    return nil, last_err
 end
 
 local function apply_manifest_to_updater(m)
@@ -426,7 +445,7 @@ local auto_state = {
     nick_triggered = false
 }
 
-local updater = {
+updater = {
     busy = false,
     has_update = false,
     remote_version = '',
