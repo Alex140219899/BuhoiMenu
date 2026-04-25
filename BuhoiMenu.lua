@@ -864,59 +864,80 @@ end
 
 local function colored_select_button(label, selected, size)
     if selected then
-        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.20, 0.80, 0.25, 0.95))
-        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.20, 0.90, 0.30, 1.00))
-        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.15, 0.70, 0.20, 1.00))
+        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.22, 0.24, 0.32, 0.95))
+        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.26, 0.30, 0.42, 1.00))
+        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.32, 0.36, 0.52, 1.00))
     else
-        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.98, 0.26, 0.26, 0.40))
-        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.98, 0.26, 0.26, 0.90))
-        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.98, 0.08, 0.08, 1.00))
+        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.12, 0.13, 0.17, 0.90))
+        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.18, 0.20, 0.28, 1.00))
+        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.23, 0.26, 0.36, 1.00))
     end
     local pressed = imgui.Button(label, size)
     imgui.PopStyleColor(3)
     return pressed
 end
 
-imgui.OnInitialize(function()
-    imgui.GetIO().IniFilename = nil
-    imgui.SwitchContext()
+local function apply_vig_style()
     local style = imgui.GetStyle()
     local c = style.Colors
     style.WindowPadding = imgui.ImVec2(8, 8)
-    style.FramePadding = imgui.ImVec2(6, 6)
-    style.ItemSpacing = imgui.ImVec2(7, 6)
-    style.WindowRounding = 10
-    style.FrameRounding = 8
-    style.ChildRounding = 8
-    style.ScrollbarRounding = 8
-    style.GrabRounding = 8
-    c[imgui.Col.WindowBg] = imgui.ImVec4(0.07, 0.08, 0.11, 0.97)
-    c[imgui.Col.ChildBg] = imgui.ImVec4(0.10, 0.11, 0.15, 0.94)
-    c[imgui.Col.Border] = imgui.ImVec4(0.28, 0.40, 0.65, 0.35)
-    c[imgui.Col.Button] = imgui.ImVec4(0.20, 0.28, 0.42, 0.80)
-    c[imgui.Col.ButtonHovered] = imgui.ImVec4(0.24, 0.40, 0.64, 0.95)
-    c[imgui.Col.ButtonActive] = imgui.ImVec4(0.18, 0.52, 0.86, 0.98)
-    c[imgui.Col.Header] = imgui.ImVec4(0.20, 0.34, 0.58, 0.70)
-    c[imgui.Col.HeaderHovered] = imgui.ImVec4(0.25, 0.46, 0.76, 0.90)
-    c[imgui.Col.HeaderActive] = imgui.ImVec4(0.17, 0.52, 0.90, 1.00)
-    c[imgui.Col.Separator] = imgui.ImVec4(0.24, 0.37, 0.60, 0.45)
+    style.FramePadding = imgui.ImVec2(6, 5)
+    style.ItemSpacing = imgui.ImVec2(6, 6)
+    style.ItemInnerSpacing = imgui.ImVec2(4, 4)
+    style.ScrollbarSize = 8
+    style.WindowRounding = 8
+    style.ChildRounding = 6
+    style.FrameRounding = 6
+    style.PopupRounding = 8
+    style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+    style.ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+
+    c[imgui.Col.Text] = imgui.ImVec4(0.93, 0.94, 0.96, 1.0)
+    c[imgui.Col.TextDisabled] = imgui.ImVec4(0.45, 0.46, 0.50, 1.0)
+    c[imgui.Col.WindowBg] = imgui.ImVec4(0.06, 0.07, 0.09, 0.98)
+    c[imgui.Col.ChildBg] = imgui.ImVec4(0.05, 0.06, 0.08, 0.98)
+    c[imgui.Col.PopupBg] = imgui.ImVec4(0.07, 0.08, 0.10, 0.98)
+    c[imgui.Col.Border] = imgui.ImVec4(0.18, 0.20, 0.24, 0.90)
+    c[imgui.Col.FrameBg] = imgui.ImVec4(0.12, 0.13, 0.16, 0.98)
+    c[imgui.Col.FrameBgHovered] = imgui.ImVec4(0.16, 0.17, 0.21, 0.98)
+    c[imgui.Col.FrameBgActive] = imgui.ImVec4(0.20, 0.22, 0.27, 0.98)
+    c[imgui.Col.TitleBg] = imgui.ImVec4(0.08, 0.09, 0.11, 0.98)
+    c[imgui.Col.TitleBgActive] = imgui.ImVec4(0.10, 0.11, 0.14, 0.98)
+    c[imgui.Col.Button] = imgui.ImVec4(0.14, 0.15, 0.18, 0.98)
+    c[imgui.Col.ButtonHovered] = imgui.ImVec4(0.22, 0.24, 0.30, 0.98)
+    c[imgui.Col.ButtonActive] = imgui.ImVec4(0.28, 0.32, 0.40, 0.98)
+    c[imgui.Col.Header] = imgui.ImVec4(0.12, 0.13, 0.17, 0.98)
+    c[imgui.Col.HeaderHovered] = imgui.ImVec4(0.18, 0.20, 0.26, 0.98)
+    c[imgui.Col.HeaderActive] = imgui.ImVec4(0.22, 0.24, 0.32, 0.98)
+    c[imgui.Col.Separator] = imgui.ImVec4(0.20, 0.22, 0.27, 0.85)
+    c[imgui.Col.ScrollbarGrab] = imgui.ImVec4(0.28, 0.30, 0.36, 0.85)
+    c[imgui.Col.ScrollbarGrabHovered] = imgui.ImVec4(0.38, 0.40, 0.48, 0.90)
+    c[imgui.Col.CheckMark] = imgui.ImVec4(0.45, 0.75, 1.00, 1.00)
+    c[imgui.Col.TextSelectedBg] = imgui.ImVec4(0.25, 0.45, 0.85, 0.45)
+    c[imgui.Col.ModalWindowDimBg] = imgui.ImVec4(0.0, 0.0, 0.0, 0.65)
+end
+
+imgui.OnInitialize(function()
+    imgui.GetIO().IniFilename = nil
+    imgui.SwitchContext()
+    apply_vig_style()
 end)
 
 local function draw_nav_button(id, title, subtitle)
     local active = cfg.ui.active_section == id
     if active then
-        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.20, 0.56, 0.94, 0.95))
-        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.24, 0.66, 1.00, 1.00))
-        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.16, 0.50, 0.86, 1.00))
+        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.22, 0.24, 0.32, 0.98))
+        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.26, 0.30, 0.42, 1.00))
+        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.32, 0.36, 0.52, 1.00))
     end
     local pressed = imgui.Button(u8(title .. '##nav_' .. id), imgui.ImVec2(158, 30))
     if active then imgui.PopStyleColor(3) end
     if pressed then cfg.ui.active_section = id end
     imgui.SetCursorPosY(imgui.GetCursorPosY() - 2)
     if active then
-        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.75, 0.89, 1.00, 1.00))
+        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.90, 0.92, 0.97, 1.00))
     else
-        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.62, 0.70, 0.82, 0.95))
+        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.62, 0.66, 0.75, 0.95))
     end
     imgui.TextWrapped(u8(subtitle))
     imgui.PopStyleColor()
@@ -936,12 +957,9 @@ end, function()
     imgui.SetNextWindowSize(imgui.ImVec2(800, 580), imgui.Cond.FirstUseEver)
     imgui.Begin(u8'##BuhoiMenu', window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar)
 
-    local tint = 0.5 + 0.5 * math.sin(os.clock() * 1.6)
-    imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.58 + 0.22 * tint, 0.82 + 0.14 * tint, 1.00, 1.00))
     imgui.Text(u8'Buhoi Menu')
-    imgui.PopStyleColor()
     imgui.SameLine()
-    imgui.TextDisabled(u8'| by Buhoi')
+    imgui.TextDisabled(u8'| стиль VigMenu')
     imgui.SameLine()
     imgui.SetCursorPosX(imgui.GetWindowWidth() - 28)
     if imgui.Button(u8'X##close_menu', imgui.ImVec2(20, 20)) then
