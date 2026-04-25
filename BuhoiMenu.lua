@@ -1,7 +1,7 @@
 script_name('BuhoiMenu')
 script_author('Buhoi')
 script_description('Unified menu: timer, climate, notify, auto off')
-script_version('1.0.4')
+script_version('1.0.5')
 
 local imgui = require('mimgui')
 local encoding = require('encoding')
