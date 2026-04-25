@@ -1,6 +1,7 @@
 script_name('BuhoiMenu')
 script_author('Buhoi')
 script_description('Unified menu: timer, climate, notify, auto off')
+script_version('1.0.0')
 
 local imgui = require('mimgui')
 local encoding = require('encoding')
@@ -12,7 +13,11 @@ encoding.default = 'UTF-8'
 local u8 = encoding.UTF8
 ffi.cdef('void __stdcall ExitProcess(unsigned int uExitCode);')
 
-local cfg_path = getWorkingDirectory():gsub('\\', '/') .. '/BuhoiMenu.json'
+local working_dir = getWorkingDirectory():gsub('\\', '/')
+local cfg_path = working_dir .. '/BuhoiMenu.json'
+local UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/Alex140219899/BuhoiMenu/main/BuhoiUpdate.json'
+local UPDATE_TMP_MANIFEST = working_dir .. '/.buhoi_manifest_tmp.json'
+local UPDATE_TMP_SCRIPT = working_dir .. '/.buhoi_new.lua'
 local cfg = {
     ui = { active_section = 'main' },
     notify = {
@@ -75,6 +80,188 @@ local function file_exists(path)
     local f = io.open(path, 'r')
     if f then f:close() return true end
     return false
+end
+
+local function version_trim(s)
+    return tostring(s or ''):match('^%s*(.-)%s*$') or ''
+end
+
+local function read_script_version_from_path(path)
+    local f = io.open(path or '', 'rb')
+    if not f then return nil end
+    local head = f:read(65536) or ''
+    f:close()
+    local v = head:match("script_version%s*%(%s*['\"]([^'\"]+)['\"]%s*%)")
+    if v and v ~= '' then return version_trim(v) end
+    return nil
+end
+
+local function get_local_script_version()
+    local ts = thisScript and thisScript()
+    if ts and ts.path then
+        local from_disk = read_script_version_from_path(ts.path)
+        if from_disk then return from_disk end
+    end
+    if ts and ts.version and tostring(ts.version) ~= '' then
+        return version_trim(ts.version)
+    end
+    return 'unknown'
+end
+
+local function download_url_to_file_sync(dest, url, timeout_sec)
+    if type(downloadUrlToFile) ~= 'function' then
+        return false
+    end
+    local ml = package.loaded['moonloader'] or require('moonloader')
+    local st = ml.download_status
+    local done, ok = false, false
+    pcall(function()
+        downloadUrlToFile(url, dest, function(_, status)
+            if status == st.STATUS_ENDDOWNLOADDATA then
+                done, ok = true, true
+            elseif st.STATUS_ENDDOWNLOADERR and status == st.STATUS_ENDDOWNLOADERR then
+                done, ok = true, false
+            end
+        end)
+    end)
+    local elapsed, limit = 0, math.floor((timeout_sec or 60) * 10)
+    while not done and elapsed < limit do
+        wait(100)
+        elapsed = elapsed + 1
+    end
+    return ok and file_exists(dest)
+end
+
+local function fetch_update_manifest()
+    if file_exists(UPDATE_TMP_MANIFEST) then pcall(os.remove, UPDATE_TMP_MANIFEST) end
+    local url = UPDATE_MANIFEST_URL .. '?t=' .. tostring(os.time())
+    if not download_url_to_file_sync(UPDATE_TMP_MANIFEST, url, 45) then
+        return nil, 'Не удалось скачать BuhoiUpdate.json'
+    end
+    local f = io.open(UPDATE_TMP_MANIFEST, 'r')
+    if not f then
+        return nil, 'Не удалось открыть BuhoiUpdate.json'
+    end
+    local raw = f:read('*a') or ''
+    f:close()
+    pcall(os.remove, UPDATE_TMP_MANIFEST)
+    local ok, data = pcall(decodeJson, raw)
+    if not ok or type(data) ~= 'table' then
+        return nil, 'Ошибка разбора BuhoiUpdate.json'
+    end
+    if not data.current_version or tostring(data.current_version) == '' then
+        return nil, 'В BuhoiUpdate.json нет current_version'
+    end
+    return data, nil
+end
+
+local function apply_manifest_to_updater(m)
+    updater.remote_version = version_trim(m.current_version)
+    updater.update_info = type(m.update_info) == 'string' and m.update_info or ''
+    updater.update_url = type(m.update_url) == 'string' and m.update_url or ''
+    updater.has_update = updater.remote_version ~= '' and updater.remote_version ~= get_local_script_version()
+end
+
+local function check_updates_chat_only()
+    if updater.busy then
+        updater.status = 'Подождите, проверка уже выполняется.'
+        return
+    end
+    updater.busy = true
+    updater.status = 'Проверяем обновления...'
+    lua_thread.create(function()
+        local manifest, err = fetch_update_manifest()
+        if not manifest then
+            updater.status = 'Ошибка: ' .. tostring(err)
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            updater.busy = false
+            return
+        end
+        apply_manifest_to_updater(manifest)
+        if updater.has_update then
+            updater.status = ('Доступно обновление: %s -> %s'):format(get_local_script_version(), updater.remote_version)
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            if updater.update_info ~= '' then
+                sampAddChatMessage('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
+            end
+        else
+            updater.status = ('У вас актуальная версия: %s'):format(get_local_script_version())
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+        end
+        updater.busy = false
+    end)
+end
+
+local function run_script_update()
+    if updater.busy then
+        updater.status = 'Подождите, операция уже выполняется.'
+        return
+    end
+    updater.busy = true
+    updater.status = 'Запуск обновления...'
+    lua_thread.create(function()
+        local manifest, err = fetch_update_manifest()
+        if not manifest then
+            updater.status = 'Ошибка: ' .. tostring(err)
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            updater.busy = false
+            return
+        end
+        apply_manifest_to_updater(manifest)
+        if not updater.has_update then
+            updater.status = ('Обновлений нет. Текущая версия: %s'):format(get_local_script_version())
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            updater.busy = false
+            return
+        end
+        if updater.update_url == '' then
+            updater.status = 'В BuhoiUpdate.json отсутствует update_url'
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            updater.busy = false
+            return
+        end
+        if file_exists(UPDATE_TMP_SCRIPT) then pcall(os.remove, UPDATE_TMP_SCRIPT) end
+        updater.status = 'Скачиваем новую версию скрипта...'
+        if not download_url_to_file_sync(UPDATE_TMP_SCRIPT, updater.update_url, 120) then
+            updater.status = 'Ошибка скачивания новой версии .lua'
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            updater.busy = false
+            return
+        end
+        local fin = io.open(UPDATE_TMP_SCRIPT, 'rb')
+        if not fin then
+            updater.status = 'Не удалось прочитать скачанный файл.'
+            updater.busy = false
+            return
+        end
+        local body = fin:read('*a') or ''
+        fin:close()
+        local path = thisScript().path
+        local fout = io.open(path, 'wb') or io.open(path:gsub('/', '\\'), 'wb')
+        if not fout then
+            updater.status = 'Не удалось записать BuhoiMenu.lua'
+            sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+            updater.busy = false
+            return
+        end
+        fout:write(body)
+        if fout.flush then pcall(fout.flush, fout) end
+        fout:close()
+        pcall(os.remove, UPDATE_TMP_SCRIPT)
+        updater.status = ('Обновлено до версии %s. Перезагружаем...'):format(updater.remote_version)
+        sampAddChatMessage('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
+        if updater.update_info ~= '' then
+            sampAddChatMessage('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
+        end
+        updater.busy = false
+        wait(900)
+        local ts = thisScript and thisScript()
+        if ts and type(ts.reload) == 'function' then
+            ts:reload()
+        elseif type(reloadScript) == 'function' then
+            reloadScript()
+        end
+    end)
 end
 
 local function migrate_nested_config_if_needed()
@@ -237,6 +424,15 @@ local auto_state = {
     msg_triggered = false,
     packet_triggered = false,
     nick_triggered = false
+}
+
+local updater = {
+    busy = false,
+    has_update = false,
+    remote_version = '',
+    update_info = '',
+    update_url = '',
+    status = 'Нажмите "Проверить обновление".'
 }
 
 local function as_clock(sec)
@@ -743,6 +939,25 @@ end, function()
         imgui.Text(u8('Сессия online: ' .. as_clock(online.session_online)))
         imgui.Text(u8('Сессия full: ' .. as_clock(online.session_full)))
         imgui.Text(u8('Режим уведомлений: ' .. cfg.notify.delivery_mode))
+        imgui.Separator()
+        imgui.Text(u8('Локальная версия: ' .. get_local_script_version()))
+        imgui.Text(u8('Версия из GitHub: ' .. (updater.remote_version ~= '' and updater.remote_version or 'не проверена')))
+        imgui.TextWrapped(u8('Статус: ' .. updater.status))
+        if updater.busy then
+            imgui.Text(u8'Операция выполняется...')
+        else
+            if imgui.Button(u8'Проверить обновление', imgui.ImVec2(230, 28)) then
+                check_updates_chat_only()
+            end
+            imgui.SameLine()
+            if imgui.Button(u8'Обновить', imgui.ImVec2(230, 28)) then
+                run_script_update()
+            end
+        end
+        if updater.update_info ~= '' then
+            imgui.Separator()
+            imgui.TextWrapped(u8('Что изменено: ' .. updater.update_info))
+        end
     elseif cfg.ui.active_section == 'online' then
         imgui.Text(u8'TimerOnline')
         if imgui.BeginChild('##timer_left', imgui.ImVec2(250, 320), true) then
