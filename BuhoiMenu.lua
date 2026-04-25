@@ -221,11 +221,6 @@ local function check_updates_chat_only()
 end
 
 local function run_script_update()
-    if not updater.manual_update_request then
-        updater.status = 'Обновление скрипта только по кнопке "Обновить".'
-        return
-    end
-    updater.manual_update_request = false
     if updater.busy then
         updater.status = 'Подождите, операция уже выполняется.'
         return
@@ -465,8 +460,7 @@ updater = {
     remote_version = '',
     update_info = '',
     update_url = '',
-    status = 'Нажмите "Проверить обновление".',
-    manual_update_request = false
+    status = 'Автообновление при запуске включено.'
 }
 
 local function as_clock(sec)
@@ -983,14 +977,7 @@ end, function()
         if updater.busy then
             imgui.Text(u8'Операция выполняется...')
         else
-            if imgui.Button(u8'Проверить обновление', imgui.ImVec2(230, 28)) then
-                check_updates_chat_only()
-            end
-            imgui.SameLine()
-            if imgui.Button(u8'Обновить', imgui.ImVec2(230, 28)) then
-                updater.manual_update_request = true
-                run_script_update()
-            end
+            imgui.TextWrapped(u8'Проверка и установка обновления выполняется автоматически после перезагрузки скриптов.')
         end
         if updater.update_info ~= '' then
             imgui.Separator()
@@ -1340,6 +1327,7 @@ function main()
     auto_state.next_allowed_ts = 0
 
     chat_add_utf8('[BuhoiMenu] /buhoimenu — меню (команды через onSendCommand)', 0x00C8FF)
+    run_script_update()
 
     lua_thread.create(update_online)
     lua_thread.create(update_autooff)
