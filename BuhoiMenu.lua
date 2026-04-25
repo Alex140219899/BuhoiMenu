@@ -206,15 +206,14 @@ local function check_updates_chat_only()
             return
         end
         apply_manifest_to_updater(manifest)
-        chat_add_utf8(('[BuhoiMenu] DEBUG local=%s remote=%s'):format(get_local_script_version(), updater.remote_version), 0x66CCFF)
         if updater.has_update then
-            updater.status = ('Доступно обновление: %s -> %s'):format(get_local_script_version(), updater.remote_version)
+            updater.status = ('Доступна актуальная версия для обновления: %s'):format(updater.remote_version)
             chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             if updater.update_info ~= '' then
                 chat_add_utf8('[BuhoiMenu] Что изменено: ' .. updater.update_info, 0x66CCFF)
             end
         else
-            updater.status = ('У вас актуальная версия: %s'):format(get_local_script_version())
+            updater.status = 'Обновлений нет. У вас актуальная версия.'
             chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
         end
         updater.busy = false
@@ -237,9 +236,8 @@ local function run_script_update()
             return
         end
         apply_manifest_to_updater(manifest)
-        chat_add_utf8(('[BuhoiMenu] DEBUG local=%s remote=%s'):format(get_local_script_version(), updater.remote_version), 0x66CCFF)
         if not updater.has_update then
-            updater.status = ('Обновлений нет. Текущая версия: %s'):format(get_local_script_version())
+            updater.status = 'Обновлений нет. У вас актуальная версия.'
             chat_add_utf8('[BuhoiMenu] ' .. updater.status, 0x66CCFF)
             updater.busy = false
             return
