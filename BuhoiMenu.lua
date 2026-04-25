@@ -86,7 +86,10 @@ end
 
 local function chat_add_utf8(msg, color)
     local text = tostring(msg or '')
-    local ok, decoded = pcall(function() return u8:decode(text) end)
+    local prev = encoding.default
+    encoding.default = 'CP1251'
+    local ok, decoded = pcall(function() return encoding.UTF8:decode(text) end)
+    encoding.default = prev
     sampAddChatMessage(ok and decoded or text, color or 0x66CCFF)
 end
 
@@ -508,7 +511,7 @@ local function pick_timer_position()
     lua_thread.create(function()
         window[0] = false
         if sampSetCursorMode then sampSetCursorMode(4) end
-        sampAddChatMessage('[BuhoiMenu] Нажмите SPACE для сохранения позиции таймера', 0x00C8FF)
+        chat_add_utf8('[BuhoiMenu] Нажмите SPACE для сохранения позиции таймера', 0x00C8FF)
         while true do
             local cX, cY = getCursorPos()
             cfg.timer.pos_x = cX
@@ -516,7 +519,7 @@ local function pick_timer_position()
             if isKeyDown(32) then
                 if sampSetCursorMode then sampSetCursorMode(0) end
                 save_cfg()
-                sampAddChatMessage('[BuhoiMenu] Позиция таймера сохранена', 0x00C8FF)
+                chat_add_utf8('[BuhoiMenu] Позиция таймера сохранена', 0x00C8FF)
                 break
             end
             wait(0)
@@ -811,7 +814,7 @@ local function run_autooff_action()
     elseif cfg.autooff.what_mode == 4 then
         sampProcessChatInput(cfg.autooff.text)
     elseif cfg.autooff.what_mode == 5 then
-        sampAddChatMessage(cfg.autooff.text, -1)
+        chat_add_utf8(cfg.autooff.text, -1)
     elseif cfg.autooff.what_mode == 6 then
         local ip, port = sampGetCurrentServerAddress()
         wait(1000)
@@ -1368,7 +1371,7 @@ function main()
     auto_state.enabled_since = os.time()
     auto_state.next_allowed_ts = 0
 
-    sampAddChatMessage('[BuhoiMenu] /buhoimenu — меню (команды через onSendCommand)', 0x00C8FF)
+    chat_add_utf8('[BuhoiMenu] /buhoimenu — меню (команды через onSendCommand)', 0x00C8FF)
 
     lua_thread.create(update_online)
     lua_thread.create(update_autooff)
