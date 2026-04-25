@@ -221,6 +221,11 @@ local function check_updates_chat_only()
 end
 
 local function run_script_update()
+    if not updater.manual_update_request then
+        updater.status = 'Обновление скрипта только по кнопке "Обновить".'
+        return
+    end
+    updater.manual_update_request = false
     if updater.busy then
         updater.status = 'Подождите, операция уже выполняется.'
         return
@@ -460,7 +465,8 @@ updater = {
     remote_version = '',
     update_info = '',
     update_url = '',
-    status = 'Нажмите "Проверить обновление".'
+    status = 'Нажмите "Проверить обновление".',
+    manual_update_request = false
 }
 
 local function as_clock(sec)
@@ -997,6 +1003,7 @@ end, function()
             end
             imgui.SameLine()
             if imgui.Button(u8'Обновить', imgui.ImVec2(230, 28)) then
+                updater.manual_update_request = true
                 run_script_update()
             end
         end
