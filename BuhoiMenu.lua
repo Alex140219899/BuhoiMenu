@@ -680,12 +680,6 @@ function se.onServerMessage(color, text)
         end
     end
     local clean = text:gsub('{......}', '')
-    if cfg.notify.bank and cfg.notify.bank.enabled then
-        local bank_label = match_bank_event(clean)
-        if bank_label then
-            send_bank_notify(('[Банк: %s]\n%s'):format(bank_label, clean))
-        end
-    end
 
     if not cfg.notify.enabled or #cfg.notify.phrases == 0 then return end
     for _, phrase in ipairs(cfg.notify.phrases) do
@@ -856,16 +850,7 @@ local function init_inputs()
     chk_climate_lock_time[0] = cfg.climate.lock_time
     chk_climate_lock_weather[0] = cfg.climate.lock_weather
     chk_notify_enabled[0] = cfg.notify.enabled
-    chk_notify_bank_enabled[0] = cfg.notify.bank and cfg.notify.bank.enabled or false
-    bank_webhook_input = imgui.new.char[2048](cfg.notify.bank and cfg.notify.bank.webhook or '')
-    bank_tg_token_input = imgui.new.char[512](cfg.notify.bank and cfg.notify.bank.telegram_bot_token or '')
-    bank_tg_chat_input = imgui.new.char[256](cfg.notify.bank and cfg.notify.bank.telegram_chat_id or '')
-    for _, def in ipairs(BANK_EVENT_DEFS) do
-        if bank_event_chks[def.id] == nil then
-            bank_event_chks[def.id] = imgui.new.bool(false)
-        end
-        bank_event_chks[def.id][0] = cfg.notify.bank.events[def.id] == true
-    end
+    cfg.notify.bank.enabled = false
 end
 
 local function colored_select_button(label, selected, size)
@@ -1138,48 +1123,6 @@ end, function()
         end
         imgui.PopItemWidth()
         imgui.Separator()
-        imgui.TextWrapped(u8'Банковские взаимодействия: отдельный webhook/Telegram. Отмечайте типы сообщений — они уходят только в канал ниже, не в общий.')
-        if imgui.Checkbox(u8'Банковские уведомления', chk_notify_bank_enabled) then
-            cfg.notify.bank.enabled = chk_notify_bank_enabled[0]
-            save_cfg()
-        end
-        if imgui.BeginChild('##bank_events', imgui.ImVec2(0, 168), true) then
-            for _, def in ipairs(BANK_EVENT_DEFS) do
-                local chk = bank_event_chks[def.id]
-                if chk and imgui.Checkbox(u8(def.label .. '##' .. def.id), chk) then
-                    cfg.notify.bank.events[def.id] = chk[0]
-                    save_cfg()
-                end
-            end
-            imgui.EndChild()
-        end
-        imgui.Text(u8'Куда слать банк (отдельно от фраз):')
-        imgui.SameLine()
-        if imgui.Button(u8((cfg.notify.bank.delivery_mode or 'discord') .. '##bank_mode')) then
-            if cfg.notify.bank.delivery_mode == 'discord' then
-                cfg.notify.bank.delivery_mode = 'telegram'
-            elseif cfg.notify.bank.delivery_mode == 'telegram' then
-                cfg.notify.bank.delivery_mode = 'both'
-            else
-                cfg.notify.bank.delivery_mode = 'discord'
-            end
-            save_cfg()
-        end
-        local bank_w = imgui.GetContentRegionAvail().x / 1.75
-        imgui.PushItemWidth(bank_w)
-        if imgui.InputText(u8'Банк: Webhook', bank_webhook_input, 2048) then
-            cfg.notify.bank.webhook = u8:decode(ffi.string(bank_webhook_input))
-            save_cfg()
-        end
-        if imgui.InputText(u8'Банк: TG token', bank_tg_token_input, 512) then
-            cfg.notify.bank.telegram_bot_token = u8:decode(ffi.string(bank_tg_token_input))
-            save_cfg()
-        end
-        if imgui.InputText(u8'Банк: TG chat id', bank_tg_chat_input, 256) then
-            cfg.notify.bank.telegram_chat_id = u8:decode(ffi.string(bank_tg_chat_input))
-            save_cfg()
-        end
-        imgui.PopItemWidth()
         imgui.Separator()
         if imgui.InputText(u8'Новая фраза', phrase_input, 256) then end
         if imgui.Button(u8'Добавить фразу') then
