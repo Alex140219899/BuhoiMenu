@@ -1,5 +1,28 @@
 {
-  "current_version": "1.0.5",
-  "update_info": "ОБНОВА",
-  "update_url": "https://raw.githubusercontent.com/Alex140219899/BuhoiMenu/main/BuhoiMenu.lua"
+  "current_version": "2.0.0",
+  "update_info": "Новое меню: модули в папке BuhoiMenu, обновление как VigMenu",
+  "update_url": "https://raw.githubusercontent.com/Alex140219899/BuhoiMenu/main/BuhoiMenu.lua",
+  "data_version": "1",
+  "data_info": "Первый набор модулей UI и функций",
+  "data_base_url": "https://raw.githubusercontent.com/Alex140219899/BuhoiMenu/main/BuhoiMenu/",
+  "data_files": [
+    "init.lua",
+    "events.lua",
+    "modules/paths.lua",
+    "modules/util.lua",
+    "modules/config.lua",
+    "modules/online.lua",
+    "modules/climate.lua",
+    "modules/notify.lua",
+    "modules/autooff.lua",
+    "modules/updater.lua",
+    "ui/theme.lua",
+    "ui/widgets.lua",
+    "ui/app.lua",
+    "ui/sections/main.lua",
+    "ui/sections/online.lua",
+    "ui/sections/climate.lua",
+    "ui/sections/notify.lua",
+    "ui/sections/autooff.lua"
+  ]
 }
